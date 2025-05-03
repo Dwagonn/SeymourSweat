@@ -20,14 +20,6 @@ def delta_e_cielab(lab1, lab2):
         (lab1.lab_b - lab2.lab_b) ** 2
     )
 
-# --- Mapping ID → Nom pièce ---
-type_mapping = {
-    "VELVET_TOP_HAT": "Top Hat",
-    "CASHMERE_JACKET": "Jacket",
-    "SATIN_TROUSERS": "Trousers",
-    "OXFORD_SHOES": "Shoes"
-}
-
 # --- Données d'entrée ---
 with open("message.txt", "r", encoding="utf-8") as f:
     message_data = json.load(f)
@@ -36,13 +28,19 @@ with open("armor_data.json", "r", encoding="utf-8") as f:
     armor_data = json.load(f)
 
 # --- Entêtes ---
-rows = [("HEX", "COLOR", "PIECE", "", "ΔE (CIELAB)", "CLOSEST", "CLOSEST HEX","CLOSEST COLOR")]
+rows = [("HEX", "COLOR", "CLOSEST COLOR", "CLOSEST HEX", "CLOSEST", "PIECE", "", "ΔE (CIELAB)")]
+
+# --- Mapping des pièces ---
+type_mapping = {
+    "VELVET_TOP_HAT": "Top Hat",
+    "CASHMERE_JACKET": "Jacket",
+    "SATIN_TROUSERS": "Trousers",
+    "OXFORD_SHOES": "Shoes"
+}
 
 # --- Traitement des couleurs ---
 for item in message_data:
     input_hex = item["itemData"]["hex"].lstrip("#").upper()
-    item_id = item["itemData"]["itemId"]
-    piece = type_mapping.get(item_id, "Unknown")
     lab_input = hex_to_lab(input_hex)
 
     closest = None
@@ -56,11 +54,15 @@ for item in message_data:
             closest = {
                 "name": ref["name"],
                 "hex": ref_hex,
+                "color": ref["color"],
                 "delta": delta
             }
 
-    # Ligne : HEX | "" | PIECE | "" | ΔE | CLOSEST | CLOSEST HEX
-    rows.append((input_hex, "", piece, "", round(closest["delta"], 2), closest["name"], closest["hex"]))
+    # Récupérer la pièce (ajustement ici)
+    piece = type_mapping.get(item["itemData"]["itemId"], "Unknown")
+
+    # Ligne : HEX | COLOR | CLOSEST COLOR | CLOSEST HEX | CLOSEST | PIECE | "" | ΔE
+    rows.append((input_hex, "", "", closest["hex"], closest["name"], piece, "", round(closest["delta"], 2)))
 
 # --- Génération ODS ---
 doc = ezodf.newdoc(doctype="ods", filename="SeymourSweat.ods")
@@ -72,4 +74,4 @@ for r, row in enumerate(rows):
         sheet[r, c].set_value(val)
 
 doc.save()
-print("Fichier 'palette_cielab_formaté.ods' généré avec succès.")
+print("Fichier 'palette_cielab_formaté_v4.ods' généré avec succès.")
